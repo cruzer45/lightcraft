@@ -16,8 +16,9 @@
 pub enum Cr3TrackKind {
     /// `CRAW` with a `JPEG` child: the full-size JPEG.
     Jpeg,
-    /// `CRAW` raw image: dimensions and the `CMP1` coding header (byte range in the file).
-    Raw { width: u16, height: u16, cmp1: Option<(usize, usize)> },
+    /// `CRAW` raw image: dimensions, the `CMP1` coding header and the `IAD1` image-area box (payload byte ranges in
+    /// the file; `IAD1` sits in `CDI1`).
+    Raw { width: u16, height: u16, cmp1: Option<(usize, usize)>, iad1: Option<(usize, usize)> },
     /// Anything else (`CTMD` timed metadata, unknown entries).
     Other([u8; 4]),
 }
@@ -188,15 +189,17 @@ fn sample_entry(bytes: &[u8], e: &BoxRef, budget: &mut usize) -> Cr3TrackKind {
     let (Some(width), Some(height)) = (be16(bytes, e.body + 24), be16(bytes, e.body + 26)) else {
         return Cr3TrackKind::Other(e.kind);
     };
-    let mut cmp1 = None;
+    let (mut cmp1, mut iad1) = (None, None);
     for c in boxes(bytes, e.body.saturating_add(CRAW_CHILDREN_AT), e.end, budget) {
         match &c.kind {
             b"JPEG" => return Cr3TrackKind::Jpeg,
             b"CMP1" => cmp1 = Some((c.body, c.end - c.body)),
+            // full box (version/flags) holding IAD1
+            b"CDI1" => iad1 = boxes(bytes, c.body + 4, c.end, budget).into_iter().find(|b| &b.kind == b"IAD1").map(|b| (b.body, b.end - b.body)),
             _ => {}
         }
     }
-    Cr3TrackKind::Raw { width, height, cmp1 }
+    Cr3TrackKind::Raw { width, height, cmp1, iad1 }
 }
 
 fn be16(b: &[u8], at: usize) -> Option<u16> {
@@ -308,7 +311,7 @@ mod tests {
         assert_eq!(c.xmp, Some(b"<x:xmpmeta/>".as_slice()));
         assert_eq!(c.tracks.len(), 2);
         assert_eq!(c.tracks[0], Cr3Track { kind: Cr3TrackKind::Jpeg, data: Some((4096, 16)) });
-        let Cr3TrackKind::Raw { width, height, cmp1: Some((at, len)) } = c.tracks[1].kind else { panic!("{:?}", c.tracks[1]) };
+        let Cr3TrackKind::Raw { width, height, cmp1: Some((at, len)), .. } = c.tracks[1].kind else { panic!("{:?}", c.tracks[1]) };
         assert_eq!((width, height, len), (60, 40, 4));
         assert_eq!(&f[at..at + 2], &[0xff, 0x10]);
         assert_eq!(c.tracks[1].data, Some((4112, 32)));

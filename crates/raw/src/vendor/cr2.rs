@@ -28,7 +28,7 @@ const CR2_SLICE: u16 = 0xc640;
 const SRAW_TYPE: u16 = 0xc6c5;
 const CR2_CFA_PATTERN: u16 = 0xc5e0;
 const SENSOR_INFO: u16 = 0x00e0;
-const COLOR_BALANCE: u16 = 0x4001;
+pub(crate) const COLOR_BALANCE: u16 = 0x4001;
 
 fn raw_ifd(tiff: &Tiff) -> Option<&Ifd> {
     tiff.ifds.get(3).or_else(|| tiff.ifds.iter().rev().find(|i| i.contains(CR2_SLICE)))
@@ -47,7 +47,7 @@ fn cfa_from_tag(v: Option<u64>) -> Option<Cfa> {
 }
 
 /// As-shot WB multipliers (R, G, B; G = 1) from the ColorBalance array.
-fn wb_from_color_balance(v: &[u64]) -> Option<[f32; 3]> {
+pub(crate) fn wb_from_color_balance(v: &[u64]) -> Option<[f32; 3]> {
     for off in [63usize, 25, 24, 34, 71, 85, 105, 69, 77] {
         let q = v.get(off..off + 4)?;
         let (r, g1, g2, b) = (q[0] as f32, q[1] as f32, q[2] as f32, q[3] as f32);

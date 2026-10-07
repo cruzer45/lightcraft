@@ -179,6 +179,7 @@ fn decode_with(bytes: &[u8], mode: Mode) -> Result<RawImage> {
     match probe(bytes).ok_or(RawError::NotRaw)? {
         RawFormat::Dng => dng::decode(bytes, mode),
         RawFormat::Cr2 => vendor::cr2::decode(bytes, mode),
+        RawFormat::Cr3 => vendor::cr3::decode(bytes, mode),
         RawFormat::Nef | RawFormat::Nrw => vendor::nef::decode(bytes),
         RawFormat::Arw => vendor::arw::decode(bytes, mode),
         RawFormat::Raf => vendor::raf::decode(bytes, mode),

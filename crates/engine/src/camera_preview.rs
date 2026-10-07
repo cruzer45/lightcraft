@@ -15,7 +15,7 @@ pub(crate) struct CameraLook {
 }
 
 pub(crate) fn fit_preview(raw: &RawImage, bytes: &[u8], transform: &CameraTransform) -> Option<CameraLook> {
-    if !transform.matrix_is_fallback || raw.format != lightcraft_raw::RawFormat::Arw {
+    if !transform.matrix_is_fallback || !matches!(raw.format, lightcraft_raw::RawFormat::Arw | lightcraft_raw::RawFormat::Cr3) {
         return None;
     }
     let jpeg = lightcraft_raw::embedded_preview(bytes)?;

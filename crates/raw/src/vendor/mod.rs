@@ -2,6 +2,8 @@
 
 pub mod arw;
 pub mod cr2;
+pub mod cr3;
+pub(crate) mod crx;
 pub mod nef;
 pub mod nefc;
 pub mod orf;
